@@ -145,14 +145,6 @@ char ouputextradatafilename [] = "/data/extradata";
 #endif//_ANDROID_
 */
 
-#undef DEBUG_PRINT_LOW
-#undef DEBUG_PRINT_HIGH
-#undef DEBUG_PRINT_ERROR
-
-#define DEBUG_PRINT_LOW ALOGV
-#define DEBUG_PRINT_HIGH ALOGE
-#define DEBUG_PRINT_ERROR ALOGE
-
 #ifndef _ANDROID_
 #include <glib.h>
 #define strlcpy g_strlcpy
@@ -1182,6 +1174,8 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
   OMX_ERRORTYPE eRet = OMX_ErrorNone;
   struct vdec_ioctl_msg ioctl_msg = {NULL,NULL};
   unsigned int   alignment = 0,buffer_size = 0;
+  int is_secure = 0;
+  int i = 0;
   int fds[2];
   int r;
   OMX_STRING device_name = "/dev/msm_vidc_dec";
@@ -1191,6 +1185,7 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
       arbitrary_bytes = false;
       role = "OMX.qcom.video.decoder.avc";
       device_name =  "/dev/msm_vidc_dec_sec";
+	  is_secure = 1;
   }
   DEBUG_PRINT_HIGH("omx_vdec::component_init(): Start of New Playback : role  = %s : DEVICE = %s",
         role, device_name);
@@ -1204,6 +1199,15 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
     drv_ctx.video_driver_fd = open(device_name, O_RDWR | O_NONBLOCK);
   }
 
+  if(is_secure && drv_ctx.video_driver_fd < 0) {
+	  do {
+		  usleep(100 * 1000);
+		  drv_ctx.video_driver_fd = open(device_name, O_RDWR | O_NONBLOCK);
+		  if (drv_ctx.video_driver_fd > 0) {
+			  break;
+		  }
+	  } while(i++ < 50);
+  }
   if(drv_ctx.video_driver_fd < 0)
   {
       DEBUG_PRINT_ERROR("\n Omx_vdec::Comp Init Returning failure, errno %d", errno);
@@ -2664,7 +2668,7 @@ OMX_ERRORTYPE  omx_vdec::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
       eRet = update_portdef(portDefn);
       if (eRet == OMX_ErrorNone)
           m_port_def = *portDefn;
-      DEBUG_PRINT_HIGH("Get_parameter: OMX_IndexParamPortDefinition: "
+      DEBUG_PRINT_LOW("Get_parameter: OMX_IndexParamPortDefinition: "
         "nPortIndex (%d), nFrameWidth (%d), nFrameHeight (%d), "
         "nStride (%d), nSliceHeight (%d), nBitrate (%d), xFramerate (0x%x), "
         "nBufferSize (%d), nBufferCountMin (%d), nBufferCountActual (%d), "
@@ -2732,7 +2736,7 @@ OMX_ERRORTYPE  omx_vdec::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                           (int)portFmt->nPortIndex);
         eRet = OMX_ErrorBadPortIndex;
       }
-      DEBUG_PRINT_HIGH("Get_parameter: OMX_IndexParamVideoPortFormat: "
+      DEBUG_PRINT_LOW("Get_parameter: OMX_IndexParamVideoPortFormat: "
           "nPortIndex (%d), nIndex (%d), eCompressionFormat (0x%x), "
           "eColorFormat (0x%x), xFramerate (0x%x)", (int)portFmt->nPortIndex,
           (int)portFmt->nIndex, (int)portFmt->eCompressionFormat,
@@ -3535,6 +3539,18 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
          }
        }
       break;
+
+    case OMX_QcomIndexParamEnableSmoothStreaming:
+      {
+
+        int rc = ioctl(drv_ctx.video_driver_fd,
+                      VDEC_IOCTL_SET_CONT_ON_RECONFIG);
+        if(rc < 0) {
+            DEBUG_PRINT_ERROR("Failed to enable Smooth Streaming on driver.");
+            eRet = OMX_ErrorHardware;
+        }
+      }
+     break;
 #endif
 #if defined (_ANDROID_HONEYCOMB_) || defined (_ANDROID_ICS_)
       /* Need to allow following two set_parameters even in Idle
@@ -3676,7 +3692,7 @@ OMX_ERRORTYPE  omx_vdec::get_config(OMX_IN OMX_HANDLETYPE      hComp,
         (OMX_QCOM_EXTRADATA_FRAMEINFO *) configData;
 
       if(m_extradata == NULL){
-          DEBUG_PRINT_ERROR("get_config: m_extradata not set. "
+          DEBUG_PRINT_LOW("get_config: m_extradata not set. "
                             "Aspect Ratio information missing!!");
       }
       else {
@@ -7494,6 +7510,7 @@ int omx_vdec::alloc_map_ion_memory(OMX_U32 buffer_size,
     alloc_data->flags = (ION_HEAP(MEM_HEAP_ID) | ION_SECURE);
   } else {
 #ifdef MAX_RES_720P
+    alloc_data->len = (buffer_size + (alloc_data->align - 1)) & ~(alloc_data->align - 1);
     alloc_data->flags = ION_HEAP(MEM_HEAP_ID);
 #else
     alloc_data->flags = (ION_HEAP(MEM_HEAP_ID) | ION_HEAP(ION_IOMMU_HEAP_ID));
