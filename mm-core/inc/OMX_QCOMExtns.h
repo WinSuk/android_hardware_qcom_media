@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2009-2012, The Linux Foundation. All rights reserved.
+Copyright (c) 2009-2013, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -8,7 +8,7 @@ modification, are permitted provided that the following conditions are met:
     * Redistributions in binary form must reproduce the above copyright
       notice, this list of conditions and the following disclaimer in the
       documentation and/or other materials provided with the distribution.
-    * Neither the name of Code Aurora nor
+    * Neither the name of The Linux Foundation nor
       the names of its contributors may be used to endorse or promote
       products derived from this software without specific prior written
       permission.
@@ -253,6 +253,8 @@ enum OMX_QCOM_COLOR_FORMATTYPE
     QOMX_COLOR_FormatYVU420PackedSemiPlanar32m4ka = 0x7FA30C01,
     QOMX_COLOR_FormatYUV420PackedSemiPlanar16m2ka,
     QOMX_COLOR_FormatYUV420PackedSemiPlanar64x32Tile2m8ka,
+    QOMX_COLOR_FormatYUV420PackedSemiPlanar32m4ka_nv21,
+    QOMX_COLOR_FormatYUV420PackedSemiPlanar16m2ka_nv21,
     QOMX_COLOR_FormatAndroidOpaque = (OMX_COLOR_FORMATTYPE) OMX_COLOR_FormatVendorStartUnused  + 0x789,
 };
 
@@ -359,6 +361,9 @@ enum OMX_QCOM_EXTN_INDEXTYPE
     OMX_QcomIndexParamSequenceHeaderWithIDR = 0x7F000020,
 
     OMX_QcomIndexEnableExtnUserData = 0x7F000021,
+
+    /*"OMX.QCOM.index.param.video.EnableSmoothStreaming"*/
+    OMX_QcomIndexParamEnableSmoothStreaming = 0x7F000022,
 };
 
 /**
